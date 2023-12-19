@@ -20,15 +20,18 @@ for rep in upload_files:
 	if rep.name.lower().endswith('csv'):
 		report = pd.read_csv(rep, sep=';', header=4)
 	elif rep.name.lower().endswith('xlsx'):
-		report = pd.read_excel(rep, header=4, dtype=str, engine='openpyxl').rename(columns={
+		report = pd.read_excel(rep, header=4, dtype=str, engine='openpyxl')
+		
+	anno, semestre = re.findall(r'(\d{4})[-_](\d)', rep.name)[0][:2]
+	report = report.rename(columns={
 									'TITOLO OPERA': 'TITOLO OPERE', 
 								    'CLASSE': 'CLASSE DI RIPARTIZIONE', 
 									'MATURATO': f'MATURATO {anno} - {semestre}'})
-		report = report[report['CODICE OPERA'].notna()]
+	report = report[report['CODICE OPERA'].notna()]
 	report = report[(report['CODICE OPERA'] != 'TOTALE') & (report['CLASSE DI RIPARTIZIONE'] != 'TOTALE')]
 	report = report.set_index('CODICE OPERA')
 
-	anno, semestre = re.findall(r'(\d{4})[-_](\d)', rep.name)[0][:2]
+	
 	if full is None:
 		full = report
 	else:
