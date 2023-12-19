@@ -23,21 +23,25 @@ for rep in upload_files:
 		report = pd.read_excel(rep, header=4, dtype=str, engine='openpyxl')
 		
 	anno, semestre = re.findall(r'(\d{4})[-_](\d)', rep.name)[0][:2]
-	report = report.rename(columns={
+	report = report.drop_duplicates().rename(columns={
 									'TITOLO OPERA': 'TITOLO OPERE', 
 								    'CLASSE': 'CLASSE DI RIPARTIZIONE', 
 									'MATURATO': f'MATURATO {anno} - {semestre}'})
-	report = report[report['CODICE OPERA'].notna()]
-	report = report[(report['CODICE OPERA'] != 'TOTALE') & (report['CLASSE DI RIPARTIZIONE'] != 'TOTALE')]
-	report = report.set_index('CODICE OPERA')
-
+	report = report[report['CODICE OPERA'].notna() & ~report['CODICE OPERA'].eq('TOTALE') & ~report['CLASSE DI RIPARTIZIONE'].eq('TOTALE')]
+	report = report.groupby('CODICE OPERA').agg({
+		'TITOLO OPERE': 'first',
+		# merge le classi di ripartizione disponibili, separate da virgola
+		'CLASSE DI RIPARTIZIONE': lambda x: ', '.join(x.dropna().unique()),
+		f'MATURATO {anno} - {semestre}': 'sum'
+	})
 	
 	if full is None:
 		full = report
 	else:
 		full = full.join(report, how='outer', rsuffix='_new')
 		full['TITOLO OPERE'] = full[['TITOLO OPERE', 'TITOLO OPERE_new']].apply(lambda x: x[0] if not isinstance(x[0], float) else x[1], axis=1)
-		full['CLASSE DI RIPARTIZIONE'] = full[['CLASSE DI RIPARTIZIONE', 'CLASSE DI RIPARTIZIONE_new']].apply(lambda x: x[0] if not isinstance(x[0], float) else x[1], axis=1)
+		full['CLASSE DI RIPARTIZIONE'] = full[['CLASSE DI RIPARTIZIONE', 'CLASSE DI RIPARTIZIONE_new']].fillna('').apply(lambda x: ', '.join(x), axis=1)
+		full = full.drop(columns=['TITOLO OPERE_new', 'CLASSE DI RIPARTIZIONE_new'])
 
 if full is not None:
 	full = full[['TITOLO OPERE', 'CLASSE DI RIPARTIZIONE'] + sorted([c for c in full.columns if c.startswith('MATURATO')])].drop_duplicates()
