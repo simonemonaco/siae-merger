@@ -46,6 +46,8 @@ for rep in upload_files:
 
 if full is not None:
 	full = full[['TITOLO OPERE', 'CLASSE DI RIPARTIZIONE'] + sorted([c for c in full.columns if c.startswith('MATURATO')])].drop_duplicates()
+	# remove ', ' at the beginning of the string of CLASSE DI RIPARTIZIONE, se presente
+	full['CLASSE DI RIPARTIZIONE'] = full['CLASSE DI RIPARTIZIONE'].apply(lambda x: x[2:] if x.startswith(', ') else x)
 	full[[c for c in full.columns if c.startswith('MATURATO')]] = full[[c for c in full.columns if c.startswith('MATURATO')]].round(2)
 
 	st.write('Scarica il file')
