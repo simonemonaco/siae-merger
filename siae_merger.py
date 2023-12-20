@@ -18,9 +18,10 @@ st.markdown(css, unsafe_allow_html=True)
 full = None
 for rep in upload_files:
 	if rep.name.lower().endswith('csv'):
-		report = pd.read_csv(rep, sep=';', header=4)
+		report = pd.read_csv(rep, sep=';', header=4, decimal=',', thousands='.')
 	elif rep.name.lower().endswith('xlsx'):
 		report = pd.read_excel(rep, header=4, dtype=str, engine='openpyxl')
+		report['MATURATO'] = report['MATURATO'].astype(float)
 		
 	anno, semestre = re.findall(r'(\d{4})[-_](\d)', rep.name)[0][:2]
 	report = report.drop_duplicates().rename(columns={
@@ -40,11 +41,12 @@ for rep in upload_files:
 	else:
 		full = full.join(report, how='outer', rsuffix='_new')
 		full['TITOLO OPERE'] = full[['TITOLO OPERE', 'TITOLO OPERE_new']].apply(lambda x: x[0] if not isinstance(x[0], float) else x[1], axis=1)
-		full['CLASSE DI RIPARTIZIONE'] = full[['CLASSE DI RIPARTIZIONE', 'CLASSE DI RIPARTIZIONE_new']].fillna('').apply(lambda x: ', '.join(x), axis=1)
+		full['CLASSE DI RIPARTIZIONE'] = full[['CLASSE DI RIPARTIZIONE', 'CLASSE DI RIPARTIZIONE_new']].fillna('').apply(lambda x: ', '.join(list(set(x[0].split(', ') + x[1].split(', ')))), axis=1)
 		full = full.drop(columns=['TITOLO OPERE_new', 'CLASSE DI RIPARTIZIONE_new'])
 
 if full is not None:
 	full = full[['TITOLO OPERE', 'CLASSE DI RIPARTIZIONE'] + sorted([c for c in full.columns if c.startswith('MATURATO')])].drop_duplicates()
+	full[[c for c in full.columns if c.startswith('MATURATO')]] = full[[c for c in full.columns if c.startswith('MATURATO')]].round(2)
 
 	st.write('Scarica il file')
 	st.download_button('Download', key='dl', data=pd.DataFrame.to_csv(full, encoding='utf-8'), file_name='SIAEE.csv', mime='text/csv')
