@@ -37,10 +37,10 @@ for rep in upload_files:
 	if full is None:
 		full = report
 	else:
-		st.write(f"Unisco {rep.name}... [{full.columns}]")
-		full = full.join(report, how='outer', rsuffix='_new', on=['CODICE OPERA', 'CLASSE DI RIPARTIZIONE'])
-		full['TITOLO OPERE'] = full[['TITOLO OPERE', 'TITOLO OPERE_new']].apply(lambda x: x[0] if not isinstance(x[0], float) else x[1], axis=1)
-		full = full.drop(columns=['TITOLO OPERE_new'])
+		if f"MATURATO {anno} - {semestre}" not in full.columns:
+			full = full.join(report, how='outer', rsuffix='_new', on=['CODICE OPERA', 'CLASSE DI RIPARTIZIONE'])
+			full['TITOLO OPERE'] = full[['TITOLO OPERE', 'TITOLO OPERE_new']].apply(lambda x: x[0] if not isinstance(x[0], float) else x[1], axis=1)
+			full = full.drop(columns=['TITOLO OPERE_new'])
 
 if full is not None:
 	full = full.reset_index()[['TITOLO OPERE', 'CLASSE DI RIPARTIZIONE'] + sorted([c for c in full.columns if c.startswith('MATURATO')])].drop_duplicates()
