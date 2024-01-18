@@ -29,17 +29,15 @@ for rep in upload_files:
 								    'CLASSE': 'CLASSE DI RIPARTIZIONE', 
 									'MATURATO': f'MATURATO {anno} - {semestre}'})
 	report = report[report['CODICE OPERA'].notna() & ~report['CODICE OPERA'].eq('TOTALE') & ~report['CLASSE DI RIPARTIZIONE'].eq('TOTALE')]
-	report = report.groupby('CODICE OPERA').agg({
+	report = report.groupby(['CODICE OPERA', 'CLASSE DI RIPARTIZIONE']).agg({
 		'TITOLO OPERE': 'first',
-		# merge le classi di ripartizione disponibili, separate da virgola
-		'CLASSE DI RIPARTIZIONE': lambda x: ', '.join(x.dropna().unique()),
 		f'MATURATO {anno} - {semestre}': 'sum'
 	})
 	
 	if full is None:
 		full = report
 	else:
-		full = full.join(report, how='outer', rsuffix='_new')
+		full = full.join(report, how='outer', rsuffix='_new', on=['CODICE OPERA', 'CLASSE DI RIPARTIZIONE'])
 		full['TITOLO OPERE'] = full[['TITOLO OPERE', 'TITOLO OPERE_new']].apply(lambda x: x[0] if not isinstance(x[0], float) else x[1], axis=1)
 		full['CLASSE DI RIPARTIZIONE'] = full[['CLASSE DI RIPARTIZIONE', 'CLASSE DI RIPARTIZIONE_new']].fillna('').apply(lambda x: ', '.join(list(set(x[0].split(', ') + x[1].split(', ')))), axis=1)
 		full = full.drop(columns=['TITOLO OPERE_new', 'CLASSE DI RIPARTIZIONE_new'])
