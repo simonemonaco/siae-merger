@@ -27,8 +27,9 @@ for rep in upload_files:
 	report.columns = report.iloc[0]
 	report = report[1:].reset_index(drop=True)
 
-	if 'MATURATO' in report.columns:
-		report['MATURATO'] = report['MATURATO'].astype(float)
+	for col in [c for c in report.columns if c.startswith('MATURATO')]:
+		if report[col].dtype == 'O':
+			report[col] = report[col].str.replace('.', '').str.replace(',', '.').astype(float)
 
 	anno, semestre = re.findall(r'(\d{4})[-_](\d)', rep.name)[0][:2]
 	report = report.drop_duplicates().rename(columns={
