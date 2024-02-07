@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import re
 
-st.header('SIAE Merger')
+st.header('SIAE Merger [NEW]')
 upload_files = st.file_uploader('', accept_multiple_files=True, type=['csv', 'xlsx'])
 css='''
 <style>
