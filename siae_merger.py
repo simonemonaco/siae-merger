@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import warnings
 import re
 
 st.header('SIAE Merger [NEW]')
@@ -18,20 +19,22 @@ st.markdown(css, unsafe_allow_html=True)
 full = None
 for rep in upload_files:
 	if rep.name.lower().endswith('csv'):
-		report = pd.read_csv(rep, sep=';', decimal=',', thousands='.', header=None, names=['c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8', 'c9', 'c10'])
+		with open(rep, 'r') as f:
+			column_index = 0
+			while (column_index := column_index + 1):
+				if 'CODICE OPERA' in f.readline(): break
+		report = pd.read_csv(rep, sep=';', skiprows=column_index-1, decimal=',', thousands='.')
 	elif rep.name.lower().endswith('xlsx'):
-		report = pd.read_excel(rep, header=None, dtype=str, engine='openpyxl', names=['c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8', 'c9', 'c10', 'c11', 'c12', 'c13', 'c14', 'c15'], index_col=None)
+		with warnings.catch_warnings():
+			warnings.simplefilter("ignore")
+			column_index = pd.read_excel(rep, header=None).iloc[:, 0].tolist().index('CLASSE')
+			report = pd.read_excel(rep, skiprows=column_index)
 	
-	report = report.dropna(axis=1, how='all')
-	report = report.loc[report[report.c1.isin(['CODICE OPERA', 'CLASSE'])].index[0]:]
-	report.columns = report.iloc[0]
-	report = report[1:].reset_index(drop=True)
+	report = report.dropna(subset=['CODICE OPERA'])
+	report = report[~report['CODICE OPERA'].eq('TOTALE')]
+	report['CODICE OPERA'] = report['CODICE OPERA'].astype(int).astype(str)
 
-	for col in [c for c in report.columns if c.startswith('MATURATO')]:
-		if report[col].dtype == 'O':
-			report[col] = report[col].str.replace('.', '').str.replace(',', '.').astype(float)
-
-	anno, semestre = re.findall(r'(\d{4})[-_](\d)', rep.name)[0][:2]
+	anno, semestre = re.findall(r'(\d{4})[-_](\d)', rep.name)[0][:2]	
 	report = report.drop_duplicates().rename(columns={
 									'TITOLO OPERA': 'TITOLO OPERE', 
 								    'CLASSE': 'CLASSE DI RIPARTIZIONE', 
@@ -39,6 +42,7 @@ for rep in upload_files:
 	report = report[report['CODICE OPERA'].notna() & ~report['CODICE OPERA'].eq('TOTALE') & ~report['CLASSE DI RIPARTIZIONE'].eq('TOTALE')]
 	report = report.groupby(['CODICE OPERA', 'CLASSE DI RIPARTIZIONE']).agg({
 		'TITOLO OPERE': 'first',
+		# merge le classi di ripartizione disponibili, separate da virgola
 		f'MATURATO {anno} - {semestre}': 'sum'
 	})
 	
